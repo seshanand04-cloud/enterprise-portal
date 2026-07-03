@@ -1,0 +1,50 @@
+name: AuthService CI/CD
+
+on:
+  push:
+    branches:
+      - develop
+    paths:
+      - 'src/AuthService.API/**'
+  pull_request:
+    branches:
+      - develop
+    paths:
+      - 'src/AuthService.API/**'
+
+jobs:
+  build-and-deploy:
+    runs-on: self-hosted
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup .NET 9
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Restore packages
+        run: dotnet restore src/AuthService.API/AuthService.API.csproj
+
+      - name: Build
+        run: dotnet build src/AuthService.API/AuthService.API.csproj -c Release --no-restore
+
+      - name: Publish
+        run: dotnet publish src/AuthService.API/AuthService.API.csproj -c Release -o ./output/AuthService
+
+      - name: Deploy to local folder
+        shell: powershell
+        run: |
+          $dest = "C:\deployments\AuthService"
+          if (!(Test-Path $dest)) { New-Item -ItemType Directory -Path $dest -Force }
+          Copy-Item -Path "./output/AuthService/*" -Destination $dest -Recurse -Force
+          Write-Host "✅ AuthService deployed to C:\deployments\AuthService"
+
+      - name: Pull latest code to local
+        shell: powershell
+        run: |
+          cd "C:\Users\seshanand -G6\enterprise-portal"
+          git pull origin develop
+          Write-Host "✅ Local code updated!"
